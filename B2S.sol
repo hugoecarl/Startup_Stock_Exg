@@ -5,6 +5,7 @@ pragma solidity ^0.6.8;
 contract B2S {
     address public owner;
     uint256 public capital;
+    enum events {ASK, BID}
 
     struct Client {
         address payable id;
@@ -30,16 +31,16 @@ contract B2S {
 
     struct Order {
         address stakeholder;
+        address company;
         uint256 price;
         uint256 amount;
-        bool ask;
+        events action;
     }
 
     // Maps a company adress to the company information
     mapping(address => Company) public companies;
     mapping(address => Client) public clients;
     mapping(address => Stock) public stocks;
-    mapping(address => Order) public orders;
 
     // Declare contract with the owner as the sender address
     constructor() public payable {
