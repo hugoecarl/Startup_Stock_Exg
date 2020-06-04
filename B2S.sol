@@ -85,10 +85,11 @@ contract B2S {
         return false;
     }
 
+    // Client only
     function clientWithdraw(uint256 amount) public returns (bool) {
         address client = msg.sender;
         uint256 _capital = clients[client].capital;
-        // If the company is aprooved and has sufficient funds
+        // If the client has sufficient funds
         if (_capital > 0 && amount >= _capital) {
             clients[client].capital -= amount;
             clients[client].id.transfer(amount);
@@ -98,6 +99,7 @@ contract B2S {
         return false;
     }
 
+    // Client only
     function clientDeposit() public payable {
         address payable id = msg.sender;
         clients[id].id = msg.sender;
