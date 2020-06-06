@@ -5,6 +5,8 @@ pragma solidity ^0.6.8;
 contract B2S {
     address public owner;
     uint256 public capital;
+    uint256 public requiredDeposit;
+
     enum events {ASK, BID}
 
     struct Client {
@@ -29,6 +31,12 @@ contract B2S {
         mapping(address => Stakeholder) stakeholders;
     }
 
+    struct Ipo {
+        address company;
+        uint256 price;
+        uint256 amount;
+    }
+
     struct Order {
         address stakeholder;
         address company;
@@ -42,26 +50,69 @@ contract B2S {
     mapping(address => Client) public clients;
     mapping(address => Stock) public stocks;
 
+    Order[] public bids;
+    Order[] public asks;
+    Ipo[] public ipos;
+
     // Declare contract with the owner as the sender address
     constructor() public payable {
         owner = msg.sender;
+        capital += msg.value;
+        requiredDeposit = 1;
     }
 
-    modifier onlyBy(address _account) {
-        require(msg.sender == _account, "Sender not authorized.");
+    modifier restricted() {
+        require(msg.sender == owner, "Sender not authorized.");
         // Do not forget the "_;"! It will
         // be replaced by the actual function
         // body when the modifier is used.
         _;
     }
 
-    function register() public payable {
-        companies[msg.sender].id = msg.sender;
-        companies[msg.sender].deposit = msg.value;
-        companies[msg.sender].approved = false;
+    function ask(
+        address company,
+        uint256 amount,
+        uint256 price
+    ) public returns (bool) {
+        address id = msg.sender;
+
+        if (companies[id].id != address(0)) {
+            return true;
+        } else if (clients[id].id != address(0)) {
+            return true;
+        }
+
+        return false;
     }
 
-    function approve(address company, bool approved) public onlyBy(owner) {
+    function bid(
+        address company,
+        uint256 amount,
+        uint256 price
+    ) public returns (bool) {
+        // verify if the client has funds
+        address id = msg.sender;
+
+        if (companies[id].id != address(0)) {
+            return true;
+        } else if (clients[id].id != address(0)) {
+            return true;
+        }
+        return false;
+    }
+
+    // Register new company and retains deposit
+    function register() public payable {
+        if (msg.value >= requiredDeposit) {
+            companies[msg.sender].id = msg.sender;
+            companies[msg.sender].deposit = msg.value;
+            companies[msg.sender].approved = false;
+        } else {
+            capital += msg.value;
+        }
+    }
+
+    function approve(address company, bool approved) public restricted {
         uint256 amount = companies[company].deposit;
         companies[company].deposit = 0;
         if (approved && amount > 0) {
@@ -71,29 +122,85 @@ contract B2S {
         }
     }
 
-    // Company only
-    function companyWithdraw(uint256 amount) public returns (bool) {
+    // Modify the required price to register new company
+    function modifyDeposit(uint256 price) public restricted {
+        requiredDeposit = price;
+    }
+
+    function ipo(uint256 amount, uint256 price) public returns (bool) {
         address company = msg.sender;
-        uint256 _capital = companies[company].capital;
         bool _approved = companies[company].approved;
-        // If the company is aprooved and has sufficient funds
-        if (_approved && _capital > 0 && amount >= _capital) {
-            companies[company].capital -= amount;
-            companies[company].id.transfer(amount);
+        // Create temporary variable
+        Ipo memory request;
+        request.company = company;
+        request.amount = amount;
+        request.price = price;
+
+        // If the company is approved and the amounts are valid
+        if (_approved && price > 0 && amount > 0) {
+            ipos.push(request);
             return true;
         }
 
         return false;
     }
 
-    // Client only
-    function clientWithdraw(uint256 amount) public returns (bool) {
-        address client = msg.sender;
-        uint256 _capital = clients[client].capital;
+    function approveIPO(uint256 index, bool approved) public restricted {
+        Ipo memory request = ipos[index];
+
+        address company = request.company;
+        uint256 amount = request.amount;
+        uint256 price = request.price;
+
+        if (index >= ipos.length) return;
+
+        for (uint256 i = index; i < ipos.length - 1; i++) {
+            ipos[i] = ipos[i + 1];
+        }
+        delete ipos[ipos.length - 1];
+
+        if (approved) {
+            stocks[company].company = company;
+            stocks[company].stakeholders[company].stakeholder = company;
+            stocks[company].stakeholders[company].amount = amount;
+
+            ask(company, amount, price);
+        }
+    }
+
+    function withdraw(uint256 amount) public returns (bool) {
+        address id = msg.sender;
+
+        if (companies[id].id != address(0)) {
+            uint256 _capital = companies[id].capital;
+            bool _approved = companies[id].approved;
+
+            if (!_approved && _capital <= 0 && amount > _capital) return false;
+
+            companies[id].capital -= amount;
+            companies[id].id.transfer(amount);
+            return true;
+        } else if (clients[id].id != address(0)) {
+            uint256 _capital = clients[id].capital;
+            if (_capital <= 0 && amount > _capital) return false;
+
+            clients[id].capital -= amount;
+            clients[id].id.transfer(amount);
+            return true;
+        }
+        return false;
+    }
+
+    // Modify the required price to register new company
+    function ownerWithdraw(address payable destination, uint256 amount)
+        public
+        restricted
+        returns (bool)
+    {
         // If the client has sufficient funds
-        if (_capital > 0 && amount >= _capital) {
-            clients[client].capital -= amount;
-            clients[client].id.transfer(amount);
+        if (capital > 0 && amount >= capital) {
+            capital -= amount;
+            destination.transfer(amount);
             return true;
         }
 
@@ -101,7 +208,7 @@ contract B2S {
     }
 
     // Client only
-    function clientDeposit() public payable {
+    function deposit() public payable {
         address payable id = msg.sender;
         clients[id].id = msg.sender;
         clients[id].capital += msg.value;
