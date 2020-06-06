@@ -1,7 +1,6 @@
-pragma solidity ^0.6.8;
+pragma solidity >=0.4.21 <0.7.0;
 
 
-// https://solidity.readthedocs.io/en/v0.6.8/common-patterns.html
 contract B2S {
     address public owner;
     uint256 public capital;
@@ -21,14 +20,14 @@ contract B2S {
         uint256 capital;
     }
 
-    struct Stakeholder {
-        address stakeholder;
+    struct Shareholder {
+        address shareholder;
         uint256 amount;
     }
 
     struct Stock {
         address company;
-        mapping(address => Stakeholder) stakeholders;
+        mapping(address => Shareholder) shareholders;
     }
 
     struct Ipo {
@@ -38,7 +37,7 @@ contract B2S {
     }
 
     struct Order {
-        address stakeholder;
+        address shareholder;
         address company;
         uint256 price;
         uint256 amount;
@@ -70,11 +69,19 @@ contract B2S {
     }
 
     function ask(
+        address shareholder,
         address company,
-        uint256 amount,
-        uint256 price
+        uint256 price,
+        uint256 amount
     ) public returns (bool) {
         address id = msg.sender;
+
+        Order memory order;
+        order.shareholder = shareholder;
+        order.company = company;
+        order.price = price;
+        order.amount = amount;
+        order.action = events.ASK;
 
         if (companies[id].id != address(0)) {
             return true;
@@ -82,22 +89,6 @@ contract B2S {
             return true;
         }
 
-        return false;
-    }
-
-    function bid(
-        address company,
-        uint256 amount,
-        uint256 price
-    ) public returns (bool) {
-        // verify if the client has funds
-        address id = msg.sender;
-
-        if (companies[id].id != address(0)) {
-            return true;
-        } else if (clients[id].id != address(0)) {
-            return true;
-        }
         return false;
     }
 
@@ -114,6 +105,7 @@ contract B2S {
 
     function approve(address company, bool approved) public restricted {
         uint256 amount = companies[company].deposit;
+        companies[company].approved = approved;
         companies[company].deposit = 0;
         if (approved && amount > 0) {
             companies[company].id.transfer(amount);
@@ -127,7 +119,7 @@ contract B2S {
         requiredDeposit = price;
     }
 
-    function ipo(uint256 amount, uint256 price) public returns (bool) {
+    function IPO(uint256 amount, uint256 price) public returns (bool) {
         address company = msg.sender;
         bool _approved = companies[company].approved;
         // Create temporary variable
@@ -161,10 +153,10 @@ contract B2S {
 
         if (approved) {
             stocks[company].company = company;
-            stocks[company].stakeholders[company].stakeholder = company;
-            stocks[company].stakeholders[company].amount = amount;
+            stocks[company].shareholders[company].shareholder = company;
+            stocks[company].shareholders[company].amount = amount;
 
-            ask(company, amount, price);
+            ask(company, company, amount, price);
         }
     }
 
@@ -212,5 +204,21 @@ contract B2S {
         address payable id = msg.sender;
         clients[id].id = msg.sender;
         clients[id].capital += msg.value;
+    }
+
+    function getCompanyApproval(address company) public view returns (bool) {
+        return companies[company].approved;
+    }
+
+    function getCompanyCapital(address company) public view returns (uint256) {
+        return companies[company].capital;
+    }
+
+    function getCompanyDeposit(address company) public view returns (uint256) {
+        return companies[company].deposit;
+    }
+
+    function getClientCapital(address client) public view returns (uint256) {
+        return companies[client].capital;
     }
 }
