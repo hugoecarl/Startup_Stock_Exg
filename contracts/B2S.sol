@@ -6,8 +6,6 @@ contract B2S {
     uint256 public capital;
     uint256 public requiredDeposit;
 
-    enum events {ASK, BID}
-
     struct Client {
         address payable id;
         uint256 capital;
@@ -41,7 +39,6 @@ contract B2S {
         address company;
         uint256 price;
         uint256 amount;
-        events action;
     }
 
     // Maps a company adress to the company information
@@ -49,8 +46,9 @@ contract B2S {
     mapping(address => Client) public clients;
     mapping(address => Stock) public stocks;
 
-    Order[] public bids;
-    Order[] public asks;
+    mapping(address => Order[]) public bids;
+    mapping(address => Order[]) public asks;
+
     Ipo[] public ipos;
 
     // Declare contract with the owner as the sender address
@@ -69,7 +67,6 @@ contract B2S {
     }
 
     function ask(
-        address shareholder,
         address company,
         uint256 price,
         uint256 amount
@@ -77,11 +74,112 @@ contract B2S {
         address id = msg.sender;
 
         Order memory order;
-        order.shareholder = shareholder;
+        order.shareholder = id;
         order.company = company;
         order.price = price;
         order.amount = amount;
-        order.action = events.ASK;
+
+        if (stocks[company].shareholders[id].amount < amount || amount < 0) {
+            return false;
+        }
+
+        if (companies[id].id != address(0)) {
+            if (!companies[id].approved) return false;
+        }
+
+        stocks[company].shareholders[id].amount -= amount;
+
+        for (uint256 i = 0; i < bids[company].length; i++) {
+            if (bids[company][i].price >= price) {
+                uint256 _amount = bids[company][i].amount;
+                uint256 _price = bids[company][i].price;
+                address _shareholder = bids[company][i].shareholder;
+
+                if (amount == _amount) {
+                    uint256 traded = amount;
+                    bids[company][i].amount -= traded;
+                    clients[id].capital += _price * traded;
+                    stocks[company].shareholders[_shareholder].amount += traded;
+                    stocks[company].shareholders[_shareholder]
+                        .shareholder = _shareholder;
+                    removeBid(company, i);
+                    break;
+                } else if (amount < _amount) {
+                    uint256 traded = amount;
+                    bids[company][i].amount -= traded;
+                    clients[id].capital += _price * traded;
+                    stocks[company].shareholders[_shareholder].amount += traded;
+                    stocks[company].shareholders[_shareholder]
+                        .shareholder = _shareholder;
+                    break;
+                } else {
+                    uint256 traded = _amount;
+                    amount -= traded;
+                    clients[id].capital += _price * traded;
+                    stocks[company].shareholders[_shareholder].amount += traded;
+                    stocks[company].shareholders[_shareholder]
+                        .shareholder = _shareholder;
+                    removeBid(company, i);
+                    i--;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    function addBid(
+        address company,
+        Order memory order,
+        uint256 index
+    ) private {
+        Order memory tmp;
+        bids[company].push(tmp);
+        for (uint256 i = bids[company].length; i > index; i--) {
+            bids[company][i] = bids[company][i - 1];
+        }
+        bids[company][index] = order;
+    }
+
+    function removeBid(address company, uint256 index) private {
+        for (uint256 i = index; i < bids[company].length - 1; i++) {
+            bids[company][i] = bids[company][i + 1];
+        }
+        delete bids[company][bids[company].length - 1];
+    }
+
+    function addAsk(
+        address company,
+        Order memory order,
+        uint256 index
+    ) private {
+        Order memory tmp;
+        asks[company].push(tmp);
+        for (uint256 i = asks[company].length; i > index; i--) {
+            asks[company][i] = asks[company][i - 1];
+        }
+        asks[company][index] = order;
+    }
+
+    function removeAsk(address company, uint256 index) private {
+        for (uint256 i = index; i < asks[company].length - 1; i++) {
+            asks[company][i] = asks[company][i + 1];
+        }
+        delete asks[company][asks[company].length - 1];
+    }
+
+    function bid(
+        address company,
+        uint256 price,
+        uint256 amount
+    ) public returns (bool) {
+        address id = msg.sender;
+
+        Order memory order;
+        order.shareholder = id;
+        order.company = company;
+        order.price = price;
+        order.amount = amount;
 
         if (companies[id].id != address(0)) {
             return true;
@@ -89,6 +187,7 @@ contract B2S {
             return true;
         }
 
+        bids[company].push(order);
         return false;
     }
 
@@ -156,25 +255,26 @@ contract B2S {
             stocks[company].shareholders[company].shareholder = company;
             stocks[company].shareholders[company].amount = amount;
 
-            ask(company, company, amount, price);
+            ask(company, amount, price);
         }
     }
 
     function withdraw(uint256 amount) public returns (bool) {
         address id = msg.sender;
 
+        // if the company and the client has the same address then this will not work
         if (companies[id].id != address(0)) {
             uint256 _capital = companies[id].capital;
             bool _approved = companies[id].approved;
 
-            if (!_approved && _capital <= 0 && amount > _capital) return false;
+            if (!_approved || _capital <= 0 || amount > _capital) return false;
 
             companies[id].capital -= amount;
             companies[id].id.transfer(amount);
             return true;
         } else if (clients[id].id != address(0)) {
             uint256 _capital = clients[id].capital;
-            if (_capital <= 0 && amount > _capital) return false;
+            if (_capital <= 0 || amount > _capital) return false;
 
             clients[id].capital -= amount;
             clients[id].id.transfer(amount);
