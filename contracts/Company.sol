@@ -1,9 +1,12 @@
 pragma solidity >=0.4.21 <0.7.0;
+import "./StructuredLinkedList.sol";
 
 
 contract Company {
-    address payable owner;
+    using StructuredLinkedList for StructuredLinkedList.List;
+    StructuredLinkedList.List list;
 
+    address payable owner;
     struct Shareholder {
         address payable id;
         uint256 tokens;
@@ -94,13 +97,23 @@ contract Company {
         if (length == 0) {
             bids[price].orders.push(order);
             return false;
-        } else {
-            Order memory tmp = asks[price].orders[length - 1];
-            delete (asks[price].orders[length - 1]);
-            shareholders[tmp.shareholder].capital += tmp.amount * tmp.price;
-            shareholders[id].tokens += tmp.amount; //amount;
-            return true;
         }
+
+        Order memory tmp = asks[price].orders[length - 1];
+        uint256 traded = amount;
+        if (tmp.amount == traded) {
+            delete (asks[price].orders[length - 1]);
+        } else if (tmp.amount < traded) {
+            delete (asks[price].orders[length - 1]);
+            traded = tmp.amount;
+            order.amount -= traded;
+            bids[price].orders.push(order);
+        } else {
+            asks[price].orders[length - 1].amount -= traded;
+        }
+        shareholders[tmp.shareholder].capital += traded * tmp.price;
+        shareholders[id].tokens += traded; //amount;
+        return true;
     }
 
     function deposit() public payable {
@@ -126,18 +139,5 @@ contract Company {
     function shares() public view returns (uint256) {
         address id = msg.sender;
         return shareholders[id].tokens;
-    }
-
-    function dummy(uint256 price) public returns (uint256) {
-        Order memory order;
-        order.price = 10101010;
-        asks[price].orders.push(order);
-        uint256 length = asks[price].orders.length;
-        delete (asks[price].orders[length - 1]);
-
-        length = asks[price].orders.length;
-        uint256 p = asks[price].orders[length - 1].price;
-
-        return p;
     }
 }
