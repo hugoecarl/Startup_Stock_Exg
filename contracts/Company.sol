@@ -16,9 +16,14 @@ contract Company {
         uint256 amount;
     }
 
+    struct Data {
+        uint256 price;
+        Order[] orders;
+    }
+
     mapping(address => Shareholder) public shareholders;
-    mapping(uint256 => Order[]) public bids;
-    mapping(uint256 => Order[]) public asks;
+    mapping(uint256 => Data) public bids;
+    mapping(uint256 => Data) public asks;
 
     // Declare contract with the owner as the sender address
     constructor() public {
@@ -42,7 +47,8 @@ contract Company {
         order.price = price;
         order.amount = amount;
 
-        asks[price].push(order);
+        asks[price].orders.push(order);
+        asks[price].price = price;
     }
 
     function ask(uint256 price, uint256 amount) public returns (bool) {
@@ -57,18 +63,18 @@ contract Company {
         order.price = price;
         order.amount = amount;
 
-        if (bids[price].length < 0) {
-            asks[price].push(order);
-            return true;
+        uint256 length = bids[price].orders.length;
+
+        if (length == 0) {
+            asks[price].orders.push(order);
+            return false;
         } else {
-            Order memory tmp = bids[price][bids[price].length - 1];
-            delete bids[price][bids[price].length - 1];
-            shareholders[id].capital += amount * tmp.price;
-            shareholders[tmp.shareholder].tokens += amount;
+            Order memory tmp = bids[price].orders[length - 1];
+            delete (bids[price].orders[length - 1]);
+            shareholders[id].capital += tmp.amount * tmp.price;
+            shareholders[tmp.shareholder].tokens += tmp.amount; //amount;
             return true;
         }
-
-        // return false;
     }
 
     function bid(uint256 price, uint256 amount) public returns (bool) {
@@ -83,14 +89,14 @@ contract Company {
         order.price = price;
         order.amount = amount;
 
-        uint256 length = asks[price].length;
+        uint256 length = asks[price].orders.length;
 
         if (length == 0) {
-            bids[price].push(order);
+            bids[price].orders.push(order);
             return false;
         } else {
-            Order memory tmp = asks[price][length - 1];
-            // delete asks[price][length - 1];
+            Order memory tmp = asks[price].orders[length - 1];
+            delete (asks[price].orders[length - 1]);
             shareholders[tmp.shareholder].capital += tmp.amount * tmp.price;
             shareholders[id].tokens += tmp.amount; //amount;
             return true;
@@ -124,14 +130,14 @@ contract Company {
 
     function dummy(uint256 price) public returns (uint256) {
         Order memory order;
-        asks[price].push(order);
-        uint256 length = asks[price].length;
-        delete asks[price][length - 1];
-        length = asks[price].length;
+        order.price = 10101010;
+        asks[price].orders.push(order);
+        uint256 length = asks[price].orders.length;
+        delete (asks[price].orders[length - 1]);
 
-        if (length == 0) {
-            return 0;
-        }
-        return asks[price][length - 1].price;
+        length = asks[price].orders.length;
+        uint256 p = asks[price].orders[length - 1].price;
+
+        return p;
     }
 }
