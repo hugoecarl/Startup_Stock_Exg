@@ -1,43 +1,31 @@
 const B2S = artifacts.require("B2S");
+const Company = artifacts.require("Company");
+const path = require("path");
+const fs = require("fs");
+
+const CompanyABI = fs.readFileSync(
+  path.resolve(__dirname, "..", "build", "contracts", "Company.json")
+);
 
 contract("B2S", (accounts) => {
-  it("should initialize with empty capital", async () => {
-    const instance = await B2S.deployed();
-    const balance = await instance.ownerWithdraw.call(accounts[0], 10);
-
-    assert.equal(balance.valueOf(), false, "10000 wasn't in the first account");
-  });
-
   it("should be able to register and approve company", async () => {
     const instance = await B2S.deployed();
-
-    const deposit = 1;
+    const deposit = 10;
     const account = accounts[1];
-    await instance.register({ from: account, value: deposit });
-    const balance = await instance.getCompanyDeposit.call(account);
-    assert.equal(
-      balance.valueOf(),
-      deposit,
-      "The deposit was not in the company"
-    );
+    const address = await instance.register.call({
+      from: account,
+      value: deposit,
+    });
 
-    const defaultApproval = await instance.getCompanyApproval.call(account);
-    assert.equal(
-      defaultApproval.valueOf(),
-      false,
-      "The company is not rejected by default"
-    );
+    console.log();
+    var placeholder = new web3.eth.Contract(JSON.parse(CompanyABI)["abi"]);
+    placeholder.options.address = address;
 
-    await instance.approve(account, true, { from: accounts[0] });
-
-    const approval = await instance.getCompanyApproval.call(account);
-    assert.equal(
-      approval.valueOf(),
-      true,
-      "The company is not accepted by default"
-    );
-
-    const zero = await instance.getCompanyDeposit.call(account);
-    assert.equal(zero.valueOf(), 0, "The deposit is not reseted by default");
+    await placeholder.methods
+      .getApproval()
+      .call({ from: accounts[0] }, function (error, result) {
+        console.log(error);
+        console.log(result);
+      });
   });
 });

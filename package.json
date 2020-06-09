@@ -1,0 +1,26 @@
+{
+  "name": "B2S",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/edufm/Startup_Stock_Exg.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/edufm/Startup_Stock_Exg/issues"
+  },
+  "homepage": "https://github.com/edufm/Startup_Stock_Exg#readme",
+  "dependencies": {
+    "web3": "^1.2.8"
+  }
+}
