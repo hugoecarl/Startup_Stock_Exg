@@ -1,5 +1,5 @@
-const B2S = artifacts.require("B2S");
+const Company = artifacts.require("Company");
 
 module.exports = function (deployer) {
-  deployer.deploy(B2S);
+  deployer.deploy(Company);
 };
