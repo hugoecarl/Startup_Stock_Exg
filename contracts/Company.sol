@@ -1,11 +1,7 @@
 pragma solidity >=0.4.21 <0.7.0;
-import "./StructuredLinkedList.sol";
 
 
 contract Company {
-    using StructuredLinkedList for StructuredLinkedList.List;
-    StructuredLinkedList.List list;
-
     address payable owner;
     struct Shareholder {
         address payable id;
