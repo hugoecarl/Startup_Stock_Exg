@@ -1,6 +1,5 @@
 pragma solidity >=0.4.21 <0.7.0;
 
-
 contract Company {
     address payable owner;
     struct Shareholder {
@@ -16,7 +15,7 @@ contract Company {
     }
 
     struct Data {
-        uint256 price; 
+        uint256 price;
         Order[] orders;
     }
 
@@ -52,97 +51,127 @@ contract Company {
 
     function ask(uint256 price, uint256 amount) public returns (bool) {
         address id = msg.sender;
-        bool found = false;
         if (shareholders[id].tokens < amount || amount < 0) {
             return false;
         }
-
         shareholders[id].tokens -= amount;
-        Order memory order;
-        order.shareholder = id;
-        order.price = price;
-        order.amount = amount;
 
-        uint256 length = bids[price].orders.length;
-        uint i;
-        for (i = price; i > price - 100; i--){
-            length = bids[price].orders.length;
-            if (length > 0){
-                found = true;
-                break;
-            }
-        }        
-
-        if (!found) {
-            asks[price].orders.push(order);
-            return true;
-        }
-
-
-        Order memory tmp = bids[i].orders[length - 1];
-        uint256 traded = amount;
-        if (tmp.amount == traded) {
-            delete (bids[i].orders[length - 1]);
-        } else if (tmp.amount < traded) {
-            delete (bids[i].orders[length - 1]);
-            traded = tmp.amount;
-            order.amount -= traded;
-            asks[i].orders.push(order);
-        } else {
-            bids[i].orders[length - 1].amount -= traded;
-        }
-        shareholders[tmp.shareholder].capital += traded;
-        shareholders[id].tokens += traded * tmp.price; //amount;
-        return true;
+        return subask(price, amount, 100);
     }
 
     function bid(uint256 price, uint256 amount) public returns (bool) {
         address id = msg.sender;
-        bool found = false;
         if (shareholders[id].capital < amount * price || amount * price < 0) {
             return false;
         }
-
         shareholders[id].capital -= amount * price;
+
+        return subbid(price, amount, 0);
+    }
+
+    function subask(
+        uint256 price,
+        uint256 amount,
+        uint256 limit
+    ) private returns (bool) {
+        address id = msg.sender;
+        bool found = false;
+        uint256 i;
+
         Order memory order;
         order.shareholder = id;
         order.price = price;
         order.amount = amount;
 
+        if (amount <= 0) {
+            return true;
+        }
         uint256 length = asks[price].orders.length;
-        uint i;
-        for (i = price; i > price - 100; i--){
-            length = asks[price].orders.length;
-            if (length > 0){
+
+        for (i = price + limit; i >= price; i--) {
+            length = bids[i].orders.length;
+            if (length > 0) {
                 found = true;
                 break;
             }
-        }        
+        }
+
+        if (!found) {
+            asks[price].orders.push(order);
+            return false;
+        }
+
+        Order memory tmp = bids[i].orders[length - 1];
+        shareholders[tmp.shareholder].capital += 30;
+        uint256 traded = amount;
+
+        if (tmp.amount == traded) {
+            delete (bids[i].orders[length - 1]);
+        } else if (tmp.amount < traded) {
+            delete (bids[i].orders[length - 1]);
+            traded = tmp.amount;
+            order.amount -= traded;
+            subask(price, amount - traded, limit);
+        } else {
+            bids[i].orders[length - 1].amount -= traded;
+        }
+        shareholders[tmp.shareholder].capital += traded;
+        shareholders[id].tokens += traded * tmp.price;
+        return true;
+    }
+
+    function subbid(
+        uint256 price,
+        uint256 amount,
+        uint256 start
+    ) private returns (bool) {
+        address id = msg.sender;
+        bool found = false;
+        uint256 i;
+
+        Order memory order;
+        order.shareholder = id;
+        order.price = price;
+        order.amount = amount;
+
+        if (amount <= 0) {
+            return true;
+        }
+        uint256 length = asks[price].orders.length;
+
+        for (i = start; i <= price; i++) {
+            length = asks[i].orders.length;
+            if (length > 0) {
+                found = true;
+                break;
+            }
+        }
 
         if (!found) {
             bids[price].orders.push(order);
-            return true;
+            return false;
         }
 
-
         Order memory tmp = asks[i].orders[length - 1];
+        shareholders[tmp.shareholder].capital += 30;
         uint256 traded = amount;
+
         if (tmp.amount == traded) {
             delete (asks[i].orders[length - 1]);
         } else if (tmp.amount < traded) {
             delete (asks[i].orders[length - 1]);
             traded = tmp.amount;
             order.amount -= traded;
-            bids[i].orders.push(order);
+            subbid(price, amount - traded, i);
         } else {
             asks[i].orders[length - 1].amount -= traded;
         }
         shareholders[tmp.shareholder].capital += traded * tmp.price;
-        shareholders[id].tokens += traded; //amount;
+        shareholders[id].tokens += traded;
         return true;
     }
 
-    function deposit() public payable {
+    function deposit() external payable {
         address payable id = msg.sender;
         shareholders[id].id = id;
         shareholders[id].capital = msg.value;
@@ -166,7 +195,4 @@ contract Company {
         address id = msg.sender;
         return shareholders[id].tokens;
     }
-
-
-
 }
