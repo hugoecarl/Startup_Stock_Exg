@@ -34,8 +34,8 @@ contract("Company", (accounts) => {
 
     await instance.ipo(price, amount, { from: account });
 
-    await instance.deposit({ from: client, value: price * amount });
-    await instance.bid(price, amount, {
+    await instance.deposit({ from: client, value: (price+2) * amount });
+    await instance.bid(price + 2, amount, {
       from: client,
     });
 
