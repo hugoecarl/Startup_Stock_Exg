@@ -200,8 +200,4 @@ contract Company {
         address id = msg.sender;
         return shareholders[id].tokens;
     }
-
-    // function dummy(uint256 price) public view returns (uint256) {
-    //     return asks[price].orders.length;
-    // }
 }
