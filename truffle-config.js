@@ -5,11 +5,11 @@ module.exports = {
   // see <http://truffleframework.com/docs/advanced/configuration>
   // for more details on how to specify configuration options!
   //
-  compilers: {
-    solc: {
-      version: "0.6.8",
-    },
-  },
+  // compilers: {
+  //   solc: {
+  //     version: "0.6.8",
+  //   },
+  // },
 
   networks: {
     development: {

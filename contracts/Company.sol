@@ -86,7 +86,7 @@ contract Company {
         if (amount <= 0) {
             return true;
         }
-        uint256 length = asks[price].orders.length;
+        uint256 length;
 
         for (i = price + limit; i >= price; i--) {
             length = bids[i].orders.length;
@@ -107,16 +107,18 @@ contract Company {
 
         if (tmp.amount == traded) {
             delete (bids[i].orders[length - 1]);
+            bids[i].orders.length--;
         } else if (tmp.amount < traded) {
             delete (bids[i].orders[length - 1]);
+            bids[i].orders.length--;
             traded = tmp.amount;
             order.amount -= traded;
-            subask(price, amount - traded, limit);
+            subask(price, amount - traded, i - price);
         } else {
             bids[i].orders[length - 1].amount -= traded;
         }
-        shareholders[tmp.shareholder].capital += traded;
-        shareholders[id].tokens += traded * tmp.price;
+        shareholders[id].capital += traded * tmp.price;
+        shareholders[tmp.shareholder].tokens += traded;
         return true;
     }
 
@@ -134,10 +136,7 @@ contract Company {
         order.price = price;
         order.amount = amount;
 
-        if (amount <= 0) {
-            return true;
-        }
-        uint256 length = asks[price].orders.length;
+        uint256 length;
 
         for (i = start; i <= price; i++) {
             length = asks[i].orders.length;
@@ -158,11 +157,17 @@ contract Company {
 
         if (tmp.amount == traded) {
             delete (asks[i].orders[length - 1]);
+            asks[i].orders.length--;
         } else if (tmp.amount < traded) {
             delete (asks[i].orders[length - 1]);
+            asks[i].orders.length--;
             traded = tmp.amount;
             order.amount -= traded;
-            subbid(price, amount - traded, i);
+            if (order.amount <= 0) {
+                return true;
+            } else {
+                subbid(price, order.amount, i);
+            }
         } else {
             asks[i].orders[length - 1].amount -= traded;
         }
@@ -195,4 +200,8 @@ contract Company {
         address id = msg.sender;
         return shareholders[id].tokens;
     }
+
+    // function dummy(uint256 price) public view returns (uint256) {
+    //     return asks[price].orders.length;
+    // }
 }

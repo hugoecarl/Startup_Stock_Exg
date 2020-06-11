@@ -35,7 +35,7 @@ contract("Company", (accounts) => {
     await instance.ipo(price, amount, { from: account });
 
     await instance.deposit({ from: client, value: price * amount });
-    const fill = await instance.bid(price, amount, {
+    await instance.bid(price, amount, {
       from: client,
     });
 
@@ -56,24 +56,24 @@ contract("Company", (accounts) => {
       value: (price + 5) * (amount - 5),
     });
 
-    // await instance.bid(price + 5, amount - 5, {
-    //   from: accounts[2],
-    // });
+    await instance.bid(price + 5, amount - 5, {
+      from: accounts[2],
+    });
 
-    // await instance.ask(price + 5, amount - 5, {
-    //   from: client,
-    // });
+    await instance.ask(price + 3, amount - 5, {
+      from: client,
+    });
 
-    // const shares2 = (
-    //   await instance.shares({
-    //     from: accounts[2],
-    //   })
-    // ).toNumber();
+    const shares2 = (
+      await instance.shares({
+        from: accounts[2],
+      })
+    ).toNumber();
 
-    // assert.equal(
-    //   shares2,
-    //   amount - 5,
-    //   "The client should have sufficient funds to create bid"
-    // );
+    assert.equal(
+      shares2,
+      amount - 5,
+      "The client should have sufficient funds to create bid"
+    );
   });
 });
