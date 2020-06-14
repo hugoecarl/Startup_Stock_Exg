@@ -59,15 +59,7 @@ contract B2S {
         return companies[exchange].approved;
     }
 
-    function dummy(address exchange) public {
-        companies[exchange].approved = true;
-    }
-
     function balance() public view restricted() returns (uint256) {
         return capital;
-    }
-
-    function dummy() public {
-        capital += 10;
     }
 }
