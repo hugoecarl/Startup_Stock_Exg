@@ -3,6 +3,7 @@ pragma solidity >=0.4.21 <0.7.0;
 contract B2S {
     address payable owner;
     uint256 public capital;
+    uint256 public minimum;
 
     struct Company {
         address payable company;
@@ -17,6 +18,7 @@ contract B2S {
     constructor() public {
         owner = msg.sender;
         capital = 0;
+        minimum = 10;
     }
 
     modifier restricted() {
@@ -28,6 +30,7 @@ contract B2S {
     }
 
     function register(address exchange) external payable {
+        if (msg.value < minimum) return;
         address payable id = msg.sender;
         companies[exchange].company = id;
         companies[exchange].exchange = exchange;
