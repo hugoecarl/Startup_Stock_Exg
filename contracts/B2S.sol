@@ -36,7 +36,7 @@ contract B2S {
         companies[exchange].exchange = exchange;
         companies[exchange].approved = false;
         companies[exchange].deposit = msg.value;
-    }
+    }j
 
     function approve(address exchange, bool approved)
         public
